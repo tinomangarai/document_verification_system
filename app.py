@@ -3,6 +3,7 @@ from PIL import Image
 import requests
 import base64
 from io import BytesIO
+import os
 
 st.set_page_config(page_title="Utility Bill Verifier", layout="centered")
 st.title("🔍 Utility Bill Verifier")
@@ -10,8 +11,8 @@ st.markdown("Upload a utility bill image to check if it's **Real or Fake** using
 
 uploaded_file = st.file_uploader("📄 Upload Utility Bill Image", type=["png", "jpg", "jpeg"])
 
-# 🔐 Use your actual OCR.space API key
-OCR_SPACE_API_KEY = "K88712695388957"
+# Use your actual OCR.space API key from environment variable
+OCR_SPACE_API_KEY = os.getenv("OCR_SPACE_API_KEY")
 
 def image_to_base64(image):
     buffered = BytesIO()
