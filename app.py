@@ -10,7 +10,8 @@ st.markdown("Upload a utility bill image to check if it's **Real or Fake** using
 
 uploaded_file = st.file_uploader("📄 Upload Utility Bill Image", type=["png", "jpg", "jpeg"])
 
-OCR_SPACE_API_KEY = "YOUR_API_KEY_HERE"  # Replace with your API key
+# 🔐 Use your actual OCR.space API key
+OCR_SPACE_API_KEY = "K88712695388957"
 
 def image_to_base64(image):
     buffered = BytesIO()
