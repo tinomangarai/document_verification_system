@@ -1,36 +1,50 @@
 import streamlit as st
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
-import numpy as np
 from PIL import Image
+import pytesseract
+import numpy as np
+import cv2
+import io
 
-# Load the trained model
-model = load_model('fake_real_classifier.keras')
+st.set_page_config(page_title="Utility Bill Verification", layout="centered")
+st.title("🔍 Utility Bill Verifier")
+st.markdown("Upload a scanned or photographed utility bill to check if it's **Real or Fake**.")
 
-# Set image size (same as training)
-img_size = (224, 224)
+uploaded_file = st.file_uploader("📄 Upload Utility Bill Image", type=["png", "jpg", "jpeg"])
 
-# App title
-st.title("Fake vs Real Image Classifier")
+def extract_text(image):
+    return pytesseract.image_to_string(image)
 
-# Upload image
-uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
+def detect_forgery(image_pil, extracted_text):
+    image_cv = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
+    edges = cv2.Canny(image_cv, 100, 200)
+    edge_density = np.sum(edges > 0) / edges.size
 
-if uploaded_file is not None:
-    # Display uploaded image
-    img = Image.open(uploaded_file)
-    st.image(img, caption="Uploaded Image", use_column_width=True)
+    if edge_density < 0.01:
+        return True, "Low edge density — may indicate excessive editing or fake scan."
 
-    # Preprocess image
-    img = img.resize(img_size)
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0) / 255.0  # Normalize
+    required_keywords = ["electricity", "account", "meter", "bill", "customer"]
+    found_keywords = [kw for kw in required_keywords if kw in extracted_text.lower()]
 
-    # Make prediction
-    prediction = model.predict(img_array)[0][0]
-    label = "Real" if prediction > 0.5 else "Fake"
-    confidence = prediction if prediction > 0.5 else 1 - prediction
+    if len(found_keywords) < 2:
+        return True, f"Missing key utility terms — found: {', '.join(found_keywords) or 'none'}"
 
-    # Show result
-    st.markdown(f"### Prediction: **{label}**")
-    st.markdown(f"### Confidence: **{confidence:.2%}**")
+    return False, "Document appears legitimate."
+
+if uploaded_file:
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Utility Bill", use_column_width=True)
+
+    with st.spinner("🔍 Analyzing the document..."):
+        text = extract_text(image)
+        is_fake, reason = detect_forgery(image, text)
+
+    st.subheader("📄 Extracted Text")
+    st.text(text)
+
+    st.subheader("✅ Verification Result")
+    if is_fake:
+        st.error("❌ FAKE DOCUMENT DETECTED")
+    else:
+        st.success("✅ DOCUMENT APPEARS REAL")
+
+    st.markdown(f"**Reason:** {reason}")
